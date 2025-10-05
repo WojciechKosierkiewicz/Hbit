@@ -11,49 +11,63 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
+    @State private var isAnimating: Bool = true
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        TabView {
+            Tab("Races", systemImage: "flag.pattern.checkered") {
+                RacesView()
+            }
+
+            Tab("Activity", systemImage: "figure.run") {
+                NavigationStack{
+                    ZStack (alignment: .top){
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.green.opacity(0.6), Color.clear]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height:400)
+                        .ignoresSafeArea()
+                    }
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 12) {
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
                     }
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                .navigationTitle("My Activity")
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            // Handle inbox action
+                        } label: {
+                            Image(systemName: "tray")
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            // Handle account action
+                        } label: {
+                            Image(systemName: "person.crop.circle")
+                        }
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            Tab("Friends", systemImage: "person.3.fill") {
+                Text("Activity")
+                
             }
         }
+        .tabViewStyle(.automatic)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        // Attach this to the TabView so the tab bar becomes transparent
+        .toolbarBackground(.hidden, for: .tabBar)
     }
 }
+
 
 #Preview {
     ContentView()
