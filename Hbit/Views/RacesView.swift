@@ -13,7 +13,15 @@ public struct RacesView: View {
         formatter.dateFormat = "d.MM.yyyy"
         let startDate = formatter.date(from: "2.04.2025") ?? Date()
         let endDate = formatter.date(from: "3.11.2025") ?? Date()
-        return Race(name: "charlie eho", start: startDate, end: endDate, yourPostion: 1)
+        return Race(name: "Pwr marathon training", start: startDate, end: endDate, yourPostion: 1)
+    }
+    
+    private var sampleRace2: Race {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d.MM.yyyy"
+        let startDate = formatter.date(from: "2.10.2025") ?? Date()
+        let endDate = formatter.date(from: "14.11.2025") ?? Date()
+        return Race(name: "Gym with friends", start: startDate, end: endDate, yourPostion: 2)
     }
 
     public var body: some View {
@@ -30,7 +38,7 @@ public struct RacesView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
                         RaceTab(race: sampleRace)
-                        RaceTab(race: sampleRace)
+                        RaceTab(race: sampleRace2)
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)

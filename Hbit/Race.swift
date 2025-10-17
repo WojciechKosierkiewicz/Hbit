@@ -30,7 +30,7 @@ final class Race {
         let minutes = Int(ceil(minutesLeft()))
         
         if ( minutes/60 > 24 ){
-            return "\(minutes/60) days left"
+            return "\(minutes/60/24) days left"
         }
         
         if ( minutes < 120 ){

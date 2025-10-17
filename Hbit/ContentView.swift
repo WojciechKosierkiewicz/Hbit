@@ -10,8 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-    @State private var isAnimating: Bool = true
+    @State private var healthAuthStatus: String = "Requesting HealthKit access..."
 
     var body: some View {
         TabView {
@@ -20,42 +19,8 @@ struct ContentView: View {
             }
 
             Tab("Activity", systemImage: "figure.run") {
-                NavigationStack{
-                    ZStack (alignment: .top){
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.green.opacity(0.6), Color.clear]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height:400)
-                        .ignoresSafeArea()
-                    }
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 12) {
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                    }
-                }
-                .navigationTitle("My Activity")
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            // Handle inbox action
-                        } label: {
-                            Image(systemName: "tray")
-                        }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            // Handle account action
-                        } label: {
-                            Image(systemName: "person.crop.circle")
-                        }
-                    }
-                }
+                ActivityView()
             }
-
             Tab("Friends", systemImage: "person.3.fill") {
                 Text("Activity")
                 
@@ -73,3 +38,4 @@ struct ContentView: View {
     ContentView()
         .modelContainer(for: Item.self, inMemory: true)
 }
+
