@@ -12,15 +12,15 @@ struct SampleActivity {
     let date: Date
     let steps: Int
     let goal: Int
-    
+
     var progress: Double {
         min(Double(steps) / Double(goal), 1.0)
     }
 }
 
-struct ActivityRow: View {
+struct SampleActivityRow: View { // <-- Renamed from ActivityRow
     let activity: SampleActivity
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 14) {

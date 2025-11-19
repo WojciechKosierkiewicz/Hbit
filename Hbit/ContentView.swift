@@ -11,6 +11,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var healthAuthStatus: String = "Requesting HealthKit access..."
+    @State private var isLoggedIn: Bool = false
 
     var body: some View {
         TabView {
@@ -23,19 +24,18 @@ struct ContentView: View {
             }
             Tab("Friends", systemImage: "person.3.fill") {
                 Text("Activity")
-                
             }
         }
         .tabViewStyle(.automatic)
         .tabBarMinimizeBehavior(.onScrollDown)
-        // Attach this to the TabView so the tab bar becomes transparent
         .toolbarBackground(.hidden, for: .tabBar)
+        .fullScreenCover(isPresented: .constant(!isLoggedIn), content: {
+            LoginView(isLoggedIn: $isLoggedIn)
+        })
     }
 }
-
 
 #Preview {
     ContentView()
         .modelContainer(for: Item.self, inMemory: true)
 }
-
