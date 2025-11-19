@@ -78,7 +78,8 @@ struct AddRaceView: View {
     @State private var description = ""
     @State private var targetValue = ""
     @State private var activityGoalRange = "Monthly"
-    @State private var acceptedActivityTypes = ""
+    // Multi-select for accepted activity types
+    @State private var selectedActivityTypes: Set<ActivityOption> = []
     @State private var startsAt = Date()
     @State private var endsAt = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     @State private var isSubmitting = false
@@ -100,7 +101,20 @@ struct AddRaceView: View {
                             Text(range)
                         }
                     }
-                    TextField("Accepted Activity Types (comma separated)", text: $acceptedActivityTypes)
+                    // Multi-select list for activity types
+                    NavigationLink {
+                        ActivityTypesSelectionView(selected: $selectedActivityTypes)
+                            .navigationTitle("Activity Types")
+                    } label: {
+                        HStack {
+                            Text("Accepted Activity Types")
+                            Spacer()
+                            Text(selectedActivityTypes.isEmpty ? "Select" : selectedActivityTypes.sorted { $0.displayName < $1.displayName }.map { $0.displayName }.joined(separator: ", "))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
                     DatePicker("Start Date", selection: $startsAt, displayedComponents: .date)
                     DatePicker("End Date", selection: $endsAt, displayedComponents: .date)
                 }
@@ -140,7 +154,7 @@ struct AddRaceView: View {
         !description.isEmpty &&
         !targetValue.isEmpty &&
         Int(targetValue) != nil &&
-        !acceptedActivityTypes.isEmpty
+        !selectedActivityTypes.isEmpty
     }
 
     private func submitRace() async {
@@ -154,14 +168,14 @@ struct AddRaceView: View {
             return
         }
 
+        let acceptedTypesArray = selectedActivityTypes.map { $0.backendValue }
+
         let raceJSON: [String: Any] = [
             "Name": name,
             "Description": description,
             "TargetValue": targetValueInt,
             "ActivityGoalRange": activityGoalRange,
-            "AcceptedActivityTypes": acceptedActivityTypes
-                .split(separator: ",")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            "AcceptedActivityTypes": acceptedTypesArray,
             "StartsAt": iso8601String(from: startsAt),
             "EndsAt": iso8601String(from: endsAt)
         ]
@@ -176,13 +190,9 @@ struct AddRaceView: View {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = data
 
-            // If you want to add authorization:
-            // request.setValue("Bearer \(yourToken)", forHTTPHeaderField: "Authorization")
-
             let (_, response) = try await URLSession.shared.data(for: request)
             if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) {
                 successMessage = "Race created successfully!"
-                // Optionally, dismiss or trigger a refresh
                 await MainActor.run {
                     dismiss()
                 }
@@ -200,5 +210,127 @@ struct AddRaceView: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Activity Options and Selection UI
+
+private enum ActivityOption: String, CaseIterable, Identifiable, Hashable {
+    case hiking
+    case swimming
+    case biking
+    case running
+    case gym
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .hiking: return "Hiking"
+        case .swimming: return "Swimming"
+        case .biking: return "Biking"
+        case .running: return "Running"
+        case .gym: return "Gym"
+        }
+    }
+
+    // If your backend expects different strings, map here:
+    var backendValue: String {
+        switch self {
+        case .hiking: return "hiking"
+        case .swimming: return "swimming"
+        case .biking: return "biking"
+        case .running: return "running"
+        case .gym: return "gym"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .hiking: return "figure.hiking"
+        case .swimming: return "figure.pool.swim"
+        case .biking: return "bicycle"
+        case .running: return "figure.run"
+        case .gym: return "dumbbell"
+        }
+    }
+}
+
+private struct ActivityTypesSelectionView: View {
+    @Binding var selected: Set<ActivityOption>
+
+    private var allOptions: [ActivityOption] { ActivityOption.allCases }
+    private var allSelected: Bool { selected.count == allOptions.count }
+
+    var body: some View {
+        List {
+            // Top separated "Select All" option
+            Section {
+                Button {
+                    toggleAll()
+                } label: {
+                    HStack {
+                        Text("Select All")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        if allSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.tint)
+                        } else {
+                            Image(systemName: "circle")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .foregroundColor(.primary)
+            }
+
+            // Activities section
+            Section {
+                ForEach(allOptions) { option in
+                    Button {
+                        toggle(option)
+                    } label: {
+                        HStack {
+                            Image(systemName: option.systemImage)
+                                .foregroundStyle(.tint)
+                            Text(option.displayName)
+                            Spacer()
+                            if selected.contains(option) {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if !selected.isEmpty {
+                    Button("Clear") {
+                        selected.removeAll()
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggleAll() {
+        if allSelected {
+            selected.removeAll()
+        } else {
+            selected = Set(allOptions)
+        }
+    }
+
+    private func toggle(_ option: ActivityOption) {
+        if selected.contains(option) {
+            selected.remove(option)
+        } else {
+            selected.insert(option)
+        }
     }
 }

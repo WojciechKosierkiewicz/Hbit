@@ -45,7 +45,7 @@ struct SampleActivityRow: View { // <-- Renamed from ActivityRow
                 }
             }
             ProgressView(value: activity.progress)
-                .accentColor(.green)
+                .tint(.green) // FIX: was .accentColor(.green)
         }
         .padding(12)
         .background(.ultraThinMaterial)
