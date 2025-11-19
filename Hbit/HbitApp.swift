@@ -13,7 +13,7 @@ struct HbitApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
-            Race.self,
+            // Race.self, // Removed legacy model
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
