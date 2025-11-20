@@ -8,6 +8,7 @@ struct ActivityDetailView: View {
     @State private var errorMessage: String?
     @State private var samples: [HeartRatePoint] = []
     @State private var zones: HeartRateZones?
+    @State private var zoneTimeSpent: ZoneTimeSpentResponse?
 
     var body: some View {
         ScrollView {
@@ -18,6 +19,9 @@ struct ActivityDetailView: View {
 
                 // Chart
                 chartSection
+
+                // Time spent per HR zone
+                timeSpentSection
             }
             .padding()
         }
@@ -141,6 +145,45 @@ struct ActivityDetailView: View {
         }
     }
 
+    private var timeSpentSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Czas w strefach")
+                .font(.headline)
+
+            if isLoading && zoneTimeSpent == nil {
+                ProgressView()
+            } else if let errorMessage = errorMessage, zoneTimeSpent == nil {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.footnote)
+            } else if let ts = zoneTimeSpent {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(ts.zones) { item in
+                        let n = zoneNumber(from: item.zone)
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(zoneColor(for: n))
+                                .frame(width: 10, height: 10)
+                            Text("Zone \(n)")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Text(item.duration)
+                                .monospacedDigit()
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(10)
+                    }
+                }
+            } else {
+                Text("Brak danych o czasie w strefach.")
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
     // Trimmed Y-axis: start at the nearest relevant zone boundary below the lowest sample
     private var yDomain: ClosedRange<Double> {
         let dataMin = Double(samples.map(\.value).min() ?? 60)
@@ -187,9 +230,12 @@ struct ActivityDetailView: View {
         do {
             async let s: [HeartRatePoint] = HeartRateService.shared.fetchHeartRateSeries(forActivityId: activity.id)
             async let z: HeartRateZones = HeartRateService.shared.fetchZones()
-            let (series, fetchedZones) = try await (s, z)
+            async let ts: ZoneTimeSpentResponse = HeartRateService.shared.fetchZoneTimeSpent(forActivityId: activity.id)
+
+            let (series, fetchedZones, timeSpent) = try await (s, z, ts)
             self.samples = series.sorted(by: { $0.time < $1.time })
             self.zones = fetchedZones
+            self.zoneTimeSpent = timeSpent
         } catch {
             if let e = error as? LocalizedError, let msg = e.errorDescription {
                 errorMessage = msg
@@ -228,6 +274,28 @@ struct ActivityDetailView: View {
         )
         .foregroundStyle(color)
         .opacity(1.0)
+    }
+
+    // MARK: - Helpers for zone label/color
+
+    private func zoneNumber(from apiZone: String) -> Int {
+        // Accepts "Z1", "z1", "Zone 1", "1"
+        let trimmed = apiZone.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if trimmed.hasPrefix("z"), let n = Int(trimmed.dropFirst()) { return n }
+        if trimmed.hasPrefix("zone"), let n = Int(trimmed.replacingOccurrences(of: "zone", with: "").trimmingCharacters(in: .whitespaces)) { return n }
+        if let n = Int(trimmed) { return n }
+        return 0
+    }
+
+    private func zoneColor(for zone: Int) -> Color {
+        switch zone {
+        case 1: return .green
+        case 2: return .yellow
+        case 3: return .orange
+        case 4: return .red
+        case 5: return .purple
+        default: return .gray
+        }
     }
 }
 

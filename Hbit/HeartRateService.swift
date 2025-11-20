@@ -103,8 +103,56 @@ final class HeartRateService {
         }
     }
 
+    // New: time spent per zone for a specific activity
+    func fetchZoneTimeSpent(forActivityId id: Int) async throws -> ZoneTimeSpentResponse {
+        let url = ApiConfig.baseURL
+            .appendingPathComponent("HeartRate")
+            .appendingPathComponent(String(id))
+            .appendingPathComponent("zones")
+            .appendingPathComponent("timespent")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let token = AuthService.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw HRServiceError.badResponse(status: -1, body: "No HTTP response")
+            }
+            guard (200...299).contains(http.statusCode) else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                if http.statusCode == 401 { throw HRServiceError.unauthorized }
+                throw HRServiceError.badResponse(status: http.statusCode, body: body)
+            }
+            return try JSONDecoder().decode(ZoneTimeSpentResponse.self, from: data)
+        } catch let e as HRServiceError {
+            throw e
+        } catch let e as DecodingError {
+            throw HRServiceError.decoding
+        } catch {
+            throw HRServiceError.transport(error)
+        }
+    }
+
     private struct RawHeartRatePoint: Decodable {
         let time: Date
         let value: Int
     }
+}
+
+// MARK: - New models for time spent per zone
+
+struct ZoneTimeSpentResponse: Decodable, Equatable {
+    let maxHeartRate: Int
+    let zones: [ZoneTimeSpentItem]
+}
+
+struct ZoneTimeSpentItem: Decodable, Equatable, Identifiable {
+    var id: String { zone }
+    let zone: String     // e.g., "Z1"
+    let seconds: Int     // total seconds
+    let duration: String // e.g., "00:20:00"
 }
