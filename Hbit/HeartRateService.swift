@@ -1,5 +1,15 @@
 import Foundation
 
+struct HeartRateZones: Decodable, Equatable {
+    let restingHeartRate: Int
+    let maxHeartRate: Int
+    let zone1LowerLimit: Int
+    let zone2LowerLimit: Int
+    let zone3LowerLimit: Int
+    let zone4LowerLimit: Int
+    let zone5LowerLimit: Int
+}
+
 final class HeartRateService {
     static let shared = HeartRateService()
     private init() {}
@@ -52,6 +62,38 @@ final class HeartRateService {
             decoder.dateDecodingStrategy = .iso8601
             let raw = try decoder.decode([RawHeartRatePoint].self, from: data)
             return raw.map { HeartRatePoint(time: $0.time, value: $0.value) }
+        } catch let e as HRServiceError {
+            throw e
+        } catch let e as DecodingError {
+            throw HRServiceError.decoding
+        } catch {
+            throw HRServiceError.transport(error)
+        }
+    }
+
+    // New: fetch heart rate zones
+    func fetchZones() async throws -> HeartRateZones {
+        let url = ApiConfig.baseURL
+            .appendingPathComponent("HeartRate")
+            .appendingPathComponent("zones")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let token = AuthService.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw HRServiceError.badResponse(status: -1, body: "No HTTP response")
+            }
+            guard (200...299).contains(http.statusCode) else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                if http.statusCode == 401 { throw HRServiceError.unauthorized }
+                throw HRServiceError.badResponse(status: http.statusCode, body: body)
+            }
+            return try JSONDecoder().decode(HeartRateZones.self, from: data)
         } catch let e as HRServiceError {
             throw e
         } catch let e as DecodingError {
