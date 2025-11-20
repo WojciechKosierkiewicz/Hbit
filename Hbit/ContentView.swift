@@ -13,6 +13,11 @@ struct ContentView: View {
     @EnvironmentObject var auth: AuthViewModel
     @State private var healthAuthStatus: String = "Requesting HealthKit access..."
 
+    // Avoid presenting login or doing heavy work in previews
+    private var isPreview: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
     var body: some View {
         TabView {
             Tab("Races", systemImage: "flag.pattern.checkered") {
@@ -23,13 +28,14 @@ struct ContentView: View {
                 ActivityView()
             }
             Tab("Friends", systemImage: "person.3.fill") {
-                Text("Activity")
+                FriendsView()
             }
         }
         .tabViewStyle(.automatic)
         .tabBarMinimizeBehavior(.onScrollDown)
         .toolbarBackground(.hidden, for: .tabBar)
-        .fullScreenCover(isPresented: .constant(!auth.isLoggedIn)) {
+        // Skip login cover in previews to avoid side effects/cancellations
+        .fullScreenCover(isPresented: .constant(!auth.isLoggedIn && !isPreview)) {
             LoginView()
                 .environmentObject(auth)
         }

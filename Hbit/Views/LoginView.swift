@@ -10,6 +10,10 @@ struct LoginView: View {
 
     @State private var showRegister = false
 
+    private var isPreview: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             Text("Sign In")
@@ -70,6 +74,8 @@ struct LoginView: View {
         }
         .padding()
         .onAppear {
+            // Don’t trigger auto-login in previews
+            guard !isPreview else { return }
             Task { await tryAutoLogin() }
         }
         .sheet(isPresented: $showRegister) {
