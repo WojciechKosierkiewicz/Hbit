@@ -10,8 +10,8 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject var auth: AuthViewModel
     @State private var healthAuthStatus: String = "Requesting HealthKit access..."
-    @State private var isLoggedIn: Bool = false
 
     var body: some View {
         TabView {
@@ -29,13 +29,15 @@ struct ContentView: View {
         .tabViewStyle(.automatic)
         .tabBarMinimizeBehavior(.onScrollDown)
         .toolbarBackground(.hidden, for: .tabBar)
-        .fullScreenCover(isPresented: .constant(!isLoggedIn), content: {
-            LoginView(isLoggedIn: $isLoggedIn)
-        })
+        .fullScreenCover(isPresented: .constant(!auth.isLoggedIn)) {
+            LoginView()
+                .environmentObject(auth)
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthViewModel())
         .modelContainer(for: Item.self, inMemory: true)
 }

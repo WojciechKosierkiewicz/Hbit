@@ -56,6 +56,11 @@ final class AuthService {
         }
     }
 
+    // MARK: - Logout
+    func logout() {
+        deleteToken()
+    }
+
     // MARK: - Token Management
     private func saveToken(_ token: String) throws {
         let data = Data(token.utf8)
@@ -67,6 +72,14 @@ final class AuthService {
         SecItemDelete(query as CFDictionary)
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw AuthError.storageError }
+    }
+
+    private func deleteToken() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: tokenKey
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     func getToken() -> String? {

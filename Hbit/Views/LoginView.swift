@@ -2,13 +2,12 @@ import SwiftUI
 import Security
 
 struct LoginView: View {
-    @Binding var isLoggedIn: Bool
+    @EnvironmentObject var auth: AuthViewModel
     @State private var username = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
 
-    // New: Present registration
     @State private var showRegister = false
 
     var body: some View {
@@ -38,9 +37,7 @@ struct LoginView: View {
             }
 
             Button(action: {
-                Task {
-                    await login()
-                }
+                Task { await login() }
             }) {
                 if isLoading {
                     ProgressView()
@@ -57,7 +54,6 @@ struct LoginView: View {
             }
             .disabled(isLoading || username.isEmpty || password.isEmpty)
 
-            // New: Register button
             Button {
                 showRegister = true
             } label: {
@@ -74,13 +70,11 @@ struct LoginView: View {
         }
         .padding()
         .onAppear {
-            Task {
-                await tryAutoLogin()
-            }
+            Task { await tryAutoLogin() }
         }
-        // New: Registration sheet
         .sheet(isPresented: $showRegister) {
             RegisterView()
+                .environmentObject(auth)
         }
     }
 
@@ -89,80 +83,17 @@ struct LoginView: View {
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
-        do {
-            try await AuthService.shared.login(username: username, password: password)
-            isLoggedIn = true
-            KeychainHelper.saveCredentials(username: username, password: password)
-        } catch {
-            if let authError = error as? AuthService.AuthError {
-                errorMessage = authError.localizedDescription
-            } else {
-                errorMessage = "Login failed: \(error.localizedDescription)"
-            }
+        if let error = await auth.login(username: username, password: password) {
+            errorMessage = error
         }
     }
 
     @MainActor
     private func tryAutoLogin() async {
-        guard let credentials = KeychainHelper.loadCredentials() else { return }
-        username = credentials.username
-        password = credentials.password
-        await login()
+        if let credentials = KeychainHelper.loadCredentials() {
+            username = credentials.username
+            password = credentials.password
+            await login()
+        }
     }
 }
-
-// MARK: - Keychain Helper
-private struct KeychainHelper {
-    private static let service = "com.yourapp.login" // Change to your bundle ID
-
-    static func saveCredentials(username: String, password: String) {
-        save(key: "username", value: username)
-        save(key: "password", value: password)
-    }
-
-    static func loadCredentials() -> (username: String, password: String)? {
-        guard
-            let username = load(key: "username"),
-            let password = load(key: "password")
-        else {
-            return nil
-        }
-        return (username, password)
-    }
-
-    private static func save(key: String, value: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key
-        ]
-        SecItemDelete(query as CFDictionary)
-
-        let attributes: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: value.data(using: .utf8)!
-        ]
-        SecItemAdd(attributes as CFDictionary, nil)
-    }
-
-    private static func load(key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: kCFBooleanTrue!,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var dataTypeRef: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
-        guard status == errSecSuccess,
-              let data = dataTypeRef as? Data,
-              let string = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        return string
-    }
-}
-

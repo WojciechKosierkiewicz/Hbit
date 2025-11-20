@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct HbitApp: App {
+    @StateObject private var auth = AuthViewModel()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -27,6 +29,7 @@ struct HbitApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(auth)
         }
         .modelContainer(sharedModelContainer)
     }
