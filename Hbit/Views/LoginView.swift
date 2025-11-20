@@ -8,6 +8,9 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
 
+    // New: Present registration
+    @State private var showRegister = false
+
     var body: some View {
         VStack(spacing: 24) {
             Text("Sign In")
@@ -54,6 +57,19 @@ struct LoginView: View {
             }
             .disabled(isLoading || username.isEmpty || password.isEmpty)
 
+            // New: Register button
+            Button {
+                showRegister = true
+            } label: {
+                Text("Register")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.gray.opacity(0.15))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+            }
+
             Spacer()
         }
         .padding()
@@ -61,6 +77,10 @@ struct LoginView: View {
             Task {
                 await tryAutoLogin()
             }
+        }
+        // New: Registration sheet
+        .sheet(isPresented: $showRegister) {
+            RegisterView()
         }
     }
 
@@ -145,3 +165,4 @@ private struct KeychainHelper {
         return string
     }
 }
+

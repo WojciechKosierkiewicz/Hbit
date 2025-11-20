@@ -33,7 +33,12 @@ public struct ActivityView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 12) {
                             ForEach(activities) { activity in
-                                ActivityRow(activity: activity)
+                                NavigationLink {
+                                    ActivityDetailView(activity: activity)
+                                } label: {
+                                    ActivityRow(activity: activity)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.vertical, 12)
@@ -72,50 +77,5 @@ public struct ActivityView: View {
             errorMessage = error.localizedDescription
         }
         isLoading = false
-    }
-}
-
-struct ActivityRow: View {
-    let activity: Activity
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 14) {
-                Image(systemName: iconName(for: activity.type))
-                    .font(.system(size: 32))
-                    .foregroundColor(.green)
-                VStack(alignment: .leading) {
-                    Text(activity.name)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    Text(activity.date, style: .date)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing) {
-                    Text(activity.type)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                    Text("User ID: \(activity.userId)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            // You can extend with more info (heartRateSamples, etc) if needed
-        }
-        .padding(12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private func iconName(for type: String) -> String {
-        switch type.lowercased() {
-        case "hiking": return "figure.hiking"
-        case "cycling": return "bicycle"
-        case "running": return "figure.run"
-        case "walking": return "figure.walk"
-        default: return "figure.walk"
-        }
     }
 }
