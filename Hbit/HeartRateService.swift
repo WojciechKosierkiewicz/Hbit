@@ -72,10 +72,20 @@ final class HeartRateService {
     }
 
     // New: fetch heart rate zones
-    func fetchZones() async throws -> HeartRateZones {
-        let url = ApiConfig.baseURL
+    // If userId is provided, fetches zones for that user; otherwise fetches for the current user
+    func fetchZones(forUserId userId: Int? = nil) async throws -> HeartRateZones {
+        var url = ApiConfig.baseURL
             .appendingPathComponent("HeartRate")
             .appendingPathComponent("zones")
+        
+        // If userId is provided, add it as a query parameter
+        if let userId = userId {
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "userId", value: String(userId))]
+            if let urlWithQuery = components?.url {
+                url = urlWithQuery
+            }
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"

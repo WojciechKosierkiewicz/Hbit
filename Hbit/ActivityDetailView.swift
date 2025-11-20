@@ -228,8 +228,11 @@ struct ActivityDetailView: View {
         defer { isLoading = false }
 
         do {
+            // Determine the userId for fetching zones (use activity's userId if available)
+            let targetUserId = activity.userId > 0 ? activity.userId : nil
+            
             async let s: [HeartRatePoint] = HeartRateService.shared.fetchHeartRateSeries(forActivityId: activity.id)
-            async let z: HeartRateZones = HeartRateService.shared.fetchZones()
+            async let z: HeartRateZones = HeartRateService.shared.fetchZones(forUserId: targetUserId)
             async let ts: ZoneTimeSpentResponse = HeartRateService.shared.fetchZoneTimeSpent(forActivityId: activity.id)
 
             let (series, fetchedZones, timeSpent) = try await (s, z, ts)

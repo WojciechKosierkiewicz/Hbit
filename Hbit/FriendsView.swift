@@ -74,6 +74,13 @@ public struct FriendsView: View {
                         Label("Manage Friends", systemImage: "person.3")
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await loadActivities() }
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                }
             }
         }
         .sheet(isPresented: $showFilters) {
@@ -94,7 +101,7 @@ public struct FriendsView: View {
                 .presentationDetents([.large])
         }
         .onAppear {
-            Task { await loadMockData() }
+            Task { await loadActivities() }
         }
     }
 
@@ -113,24 +120,31 @@ public struct FriendsView: View {
         }
     }
 
-    // MARK: - Mock loading for UI preview
+    // MARK: - Load activities from API
     @MainActor
-    private func loadMockData() async {
+    private func loadActivities() async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
-        // Simulate async load
-        try? await Task.sleep(nanoseconds: 300_000_000)
-
-        // Replace with real data later
-        activities = [
-            FriendActivity(id: 101, friendName: "Alice", name: "Evening Run", date: Date().addingTimeInterval(-3600), type: "Running"),
-            FriendActivity(id: 102, friendName: "Bob", name: "Morning Walk", date: Date().addingTimeInterval(-86400), type: "Walking"),
-            FriendActivity(id: 103, friendName: "Charlie", name: "Hill Cycling", date: Date().addingTimeInterval(-5400), type: "Cycling"),
-            FriendActivity(id: 104, friendName: "Alice", name: "Trail Hike", date: Date().addingTimeInterval(-7200), type: "Hiking"),
-            FriendActivity(id: 105, friendName: "Diana", name: "Swim Laps", date: Date().addingTimeInterval(-10_800), type: "Swimming")
-        ]
+        do {
+            let apiActivities = try await FriendsService.shared.fetchFriendActivitiesWithDetails()
+            
+            // Convert to FriendActivity for the UI
+            activities = apiActivities.map { apiActivity in
+                FriendActivity(
+                    id: apiActivity.id,
+                    friendName: apiActivity.friendName,
+                    name: apiActivity.name,
+                    date: apiActivity.date,
+                    type: apiActivity.type,
+                    userId: apiActivity.userId  // Pass the userId
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            print("Failed to load friend activities: \(error)")
+        }
     }
 }
 
@@ -141,6 +155,7 @@ struct FriendActivity: Identifiable {
     let name: String
     let date: Date
     let type: String
+    let userId: Int  // Added to store the friend's user ID
 
     // Temporary mapping to your Activity type for detail screen
     func asActivity() -> Activity {
@@ -149,8 +164,8 @@ struct FriendActivity: Identifiable {
             name: name,
             date: date,
             type: type,
-            userId: -1,
-            user: Activity.User(id: nil, name: friendName),
+            userId: userId,  // Pass the actual userId
+            user: Activity.User(id: userId, name: friendName),
             heartRateSamples: []
         )
     }
